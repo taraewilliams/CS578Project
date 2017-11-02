@@ -1,19 +1,31 @@
-import random
-import csv
 import pandas as pd
 from random import randint
+import os
 
 
-def preprocess_data():
-    data = read_data("Data/train.csv")
-    data,numerical_data = clean_data(data, "TripType", ["Weekday", "DepartmentDescription"])
-    # data = read_data("CleanData/data.csv")
-    training_data, test_data = split_data(data, 0.9, 'TripType')
+def preprocess_data(read_directory, write_directory, train_percentage, convert_categorical=False):
 
-    training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
-    test_data_numerical = numerical_data.loc[numerical_data.index.isin(test_data.index)]
-    write_data('CleanData/train_numerical.csv', training_data_numerical)
-    write_data('CleanData/test_numerical.csv', test_data_numerical)
+    try:
+        os.makedirs(write_directory)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+    data = read_data(read_directory + "/train.csv")
+    data = clean_data(data, "TripType")
+    write_data(write_directory + '/data.csv', data)
+
+    training_data, test_data = split_data(data, train_percentage, 'TripType')
+    write_data(write_directory + '/train.csv', training_data)
+    write_data(write_directory + '/test.csv', test_data)
+
+    if convert_categorical:
+        numerical_data = convert_categorical_columns(data, ["Weekday", "DepartmentDescription"])
+        training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
+        test_data_numerical = numerical_data.loc[numerical_data.index.isin(test_data.index)]
+        write_data(write_directory + '/data_numerical.csv', numerical_data)
+        write_data(write_directory + '/train_numerical.csv', training_data_numerical)
+        write_data(write_directory + '/test_numerical.csv', test_data_numerical)
 
 
 # Read CSV file into Pandas DataFrame
@@ -31,13 +43,16 @@ def write_data(file_name, data):
 #   Convert categorical columns to numerical ones
 #   Remove null values
 #   Write the data to a new CSV file
-def clean_data(data, order_label, category_labels):
+def clean_data(data, order_label):
     data = remove_null_values(data)
     data = order_data_by_label(data, order_label)
+    return data
+
+
+# Convert categorical columns to numerical columns
+def convert_categorical_columns(data, category_labels):
     numerical_data = convert_categorical_to_numerical(data.copy(), category_labels)
-    write_data('CleanData/data.csv', data)
-    write_data('CleanData/data_numerical.csv', numerical_data)
-    return data, numerical_data
+    return numerical_data
 
 
 # Split Data:
@@ -58,9 +73,6 @@ def split_data(data, train_percentage, label):
         # Choose test data
         test_sample = group.loc[~group.index.isin(training_sample.index)]
         test_data = test_data.append(test_sample, ignore_index=True)
-
-    write_data('CleanData/train.csv', training_data)
-    write_data('CleanData/test.csv', test_data)
 
     return training_data, test_data
 

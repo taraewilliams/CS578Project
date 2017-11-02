@@ -1,13 +1,14 @@
-import random
-import csv
 import pandas as pd
 from random import randint
 
 
 def preprocess_data():
+    #convert or not
+    #directory to go to
+    #ratio of test/training data
+    
     data = read_data("Data/train.csv")
     data,numerical_data = clean_data(data, "TripType", ["Weekday", "DepartmentDescription"])
-    # data = read_data("CleanData/data.csv")
     training_data, test_data = split_data(data, 0.9, 'TripType')
 
     training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]

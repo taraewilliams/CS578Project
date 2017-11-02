@@ -5,15 +5,25 @@ from random import randint
 
 
 def preprocess_data():
-    # data = read_data("Data/train.csv")
-    # data = clean_data(data, "TripType", ["Weekday", "DepartmentDescription"])
-    data = read_data("CleanData/data.csv")
-    data = split_data(data, 0.9, 'TripType')
+    data = read_data("Data/train.csv")
+    data,numerical_data = clean_data(data, "TripType", ["Weekday", "DepartmentDescription"])
+    # data = read_data("CleanData/data.csv")
+    training_data, test_data = split_data(data, 0.9, 'TripType')
+
+    training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
+    test_data_numerical = numerical_data.loc[numerical_data.index.isin(test_data.index)]
+    write_data('CleanData/train_numerical.csv', training_data_numerical)
+    write_data('CleanData/test_numerical.csv', test_data_numerical)
 
 
 # Read CSV file into Pandas DataFrame
 def read_data(file_name):
     return pd.read_csv(file_name)
+
+
+# Write data into CSV file
+def write_data(file_name, data):
+    data.to_csv(file_name, index=False)
 
 
 # Clean Data:
@@ -24,9 +34,10 @@ def read_data(file_name):
 def clean_data(data, order_label, category_labels):
     data = remove_null_values(data)
     data = order_data_by_label(data, order_label)
-    data = convert_categorical_to_numerical(data, category_labels)
-    data.to_csv('CleanData/data.csv', index=False)
-    return data
+    numerical_data = convert_categorical_to_numerical(data.copy(), category_labels)
+    write_data('CleanData/data.csv', data)
+    write_data('CleanData/data_numerical.csv', numerical_data)
+    return data, numerical_data
 
 
 # Split Data:
@@ -36,10 +47,10 @@ def split_data(data, train_percentage, label):
     training_data = pd.DataFrame([], columns=list(data))
     test_data = pd.DataFrame([], columns=list(data))
 
-    trip_types = data['TripType'].unique().tolist()
+    trip_types = data[label].unique().tolist()
 
     for trip in trip_types:
-        group = data.loc[data.TripType==trip]
+        group = data.loc[data[label]==trip]
 
         # Choose training data
         training_sample = group.sample(frac=train_percentage)
@@ -48,8 +59,9 @@ def split_data(data, train_percentage, label):
         test_sample = group.loc[~group.index.isin(training_sample.index)]
         test_data = test_data.append(test_sample, ignore_index=True)
 
-    training_data.to_csv('CleanData/train.csv', index=False)
-    test_data.to_csv('CleanData/test.csv', index=False)
+    write_data('CleanData/train.csv', training_data)
+    write_data('CleanData/test.csv', test_data)
+
     return training_data, test_data
 
 

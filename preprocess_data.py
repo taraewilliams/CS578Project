@@ -3,29 +3,34 @@ from random import randint
 import os
 
 
-def preprocess_data(read_directory, write_directory, train_percentage, convert_categorical=False):
+def preprocess_data(read_directory, write_directory, test_percentage, validation_percentage, convert_categorical=False):
 
-    try:
-        os.makedirs(write_directory)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
+    # try:
+    #     os.makedirs(write_directory)
+    # except OSError as e:
+    #     if e.errno != errno.EEXIST:
+    #         raise
 
     data = read_data(read_directory + "/train.csv")
     data = clean_data(data, "TripType")
     write_data(write_directory + '/data.csv', data)
 
-    training_data, test_data = split_data(data, train_percentage, 'TripType')
+    test_data, first_split = split_data(data, test_percentage, 'TripType')
+    validation_data, training_data = split_data(first_split, validation_percentage, 'TripType')
+
     write_data(write_directory + '/train.csv', training_data)
     write_data(write_directory + '/test.csv', test_data)
+    write_data(write_directory + '/validation.csv', validation_data)
 
     if convert_categorical:
         numerical_data = convert_categorical_columns(data, ["Weekday", "DepartmentDescription"])
         training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
         test_data_numerical = numerical_data.loc[numerical_data.index.isin(test_data.index)]
+        validation_data_numerical = numerical_data.loc[numerical_data.index.isin(validation_data.index)]
         write_data(write_directory + '/data_numerical.csv', numerical_data)
         write_data(write_directory + '/train_numerical.csv', training_data_numerical)
         write_data(write_directory + '/test_numerical.csv', test_data_numerical)
+        write_data(write_directory + '/validation_numerical.csv', validation_data_numerical)
 
 
 # Read CSV file into Pandas DataFrame

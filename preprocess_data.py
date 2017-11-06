@@ -3,30 +3,38 @@ from random import randint
 import os
 
 
-def preprocess_data(read_directory, write_directory, test_percentage, validation_percentage, convert_categorical=False):
+def preprocess_data(read_directory, write_directory, test_percentage, validation_percentage, convert_categorical=False, categorical_columns=["Weekday", "DepartmentDescription"], sort_label="TripType"):
 
-    # try:
-    #     os.makedirs(write_directory)
-    # except OSError as e:
-    #     if e.errno != errno.EEXIST:
-    #         raise
+    # Make write directory if it does not exist
+    if not os.path.isdir(write_directory):
+        try:
+            os.makedirs(write_directory)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
+    # Clean all data
     data = read_data(read_directory + "/train.csv")
-    data = clean_data(data, "TripType")
+    data = clean_data(data, sort_label)
     write_data(write_directory + '/data.csv', data)
 
-    test_data, first_split = split_data(data, test_percentage, 'TripType')
-    validation_data, training_data = split_data(first_split, validation_percentage, 'TripType')
-
+    # Split data into test, training, and validation data
+    test_data, remaining_data = split_data(data, test_percentage, sort_label)
+    validation_data, training_data = split_data(remaining_data, validation_percentage, sort_label)
+    # Write test, training, and validation data to CSV files
     write_data(write_directory + '/train.csv', training_data)
     write_data(write_directory + '/test.csv', test_data)
     write_data(write_directory + '/validation.csv', validation_data)
 
+    # Called if converting categories to numerical values
     if convert_categorical:
-        numerical_data = convert_categorical_columns(data, ["Weekday", "DepartmentDescription"])
+        # Convert all data to numerical data
+        numerical_data = convert_categorical_columns(data, categorical_columns)
+        # Split data into test, training, and validation data
         training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
         test_data_numerical = numerical_data.loc[numerical_data.index.isin(test_data.index)]
         validation_data_numerical = numerical_data.loc[numerical_data.index.isin(validation_data.index)]
+        # Write all data, and test, training, and validation data to CSV files
         write_data(write_directory + '/data_numerical.csv', numerical_data)
         write_data(write_directory + '/train_numerical.csv', training_data_numerical)
         write_data(write_directory + '/test_numerical.csv', test_data_numerical)

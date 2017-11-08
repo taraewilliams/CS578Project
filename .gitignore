@@ -2,4 +2,5 @@
 .ipynb_checkpoints/
 *.npz
 CleanData*
+Cleaned*
 __pycache__

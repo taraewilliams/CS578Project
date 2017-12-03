@@ -26,11 +26,13 @@ def preprocess_data(read_directory, write_directory, number_test_samples, sort_l
 
 
     # Get Grouped Test Data
-    data, groups = group_test_data(data, group_label, number_test_samples)
-    return data, groups
+    data, numerical_data, test_groups = group_test_data(data, numerical_data, group_label, number_test_samples)
+    data, numerical_data, validation_groups = group_test_data(data, numerical_data, group_label, (number_test_samples/2) )
+    data, numerical_data, training_groups = group_test_data(data, numerical_data, group_label, (number_test_samples) )
+    return data, numerical_data, test_groups, validation_groups, training_groups
 
 
-def select_data_sets(data, write_directory, validation_percentage, convert_categorical=True, categorical_columns=["Weekday", "DepartmentDescription"], sort_label="TripType"):
+def select_data_sets(data, numerical_data, write_directory, validation_percentage, convert_categorical=True, categorical_columns=["Weekday", "DepartmentDescription"], sort_label="TripType"):
 
     # Split data into training and validation data
     validation_data, training_data = split_data(data, validation_percentage, sort_label)
@@ -41,7 +43,6 @@ def select_data_sets(data, write_directory, validation_percentage, convert_categ
 
     # Called if converting categories to numerical values
     if convert_categorical:
-        numerical_data = read_data(write_directory + "/data_numerical.csv")
         # Split data into training and validation data
         training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
         validation_data_numerical = numerical_data.loc[numerical_data.index.isin(validation_data.index)]
@@ -74,30 +75,38 @@ def clean_data(data, order_label):
 # Group Test Data:
 #   Get test data that is grouped by a column value
 #   i.e. select random number of groups with shared column value VisitNumber
-def group_test_data(data, label, number_samples):
-    if (number_samples >= data.shape[0]):
-        number_samples = data.shape[0]
+def group_test_data(data, numerical_data, label, number_samples):
+    if (number_samples >= numerical_data.shape[0]):
+        number_samples = numerical_data.shape[0]
 
-    visits = data[label].unique().tolist()
+    visits = numerical_data[label].unique().tolist()
 
     groups = []
     group_indices = []
     group_values = []
+    total_size = 0
+    is_full = False
 
-    while len(groups) < number_samples:
+    while not is_full:
         visit_index = randint(0, len(visits))
 
         if (visit_index not in group_indices):
             visit = visits[visit_index]
+            group = numerical_data.loc[data[label]==visit]
 
-            group_indices.append(visit_index)
-            group_values.append(visit)
+            total_size += group.shape[0]
+            if (total_size > number_samples):
+                is_full = True
+            else:
+                groups.append(group.values)
+                group_indices.append(visit_index)
+                group_values.append(visit)
 
-            group = data.loc[data[label]==visit]
-            groups.append(group.values)
+
 
     data = data[~data[label].isin(group_values)]
-    return data, groups
+    numerical_data = numerical_data[~numerical_data[label].isin(group_values)]
+    return data, numerical_data, groups
 
 
 # Convert categorical columns to numerical columns

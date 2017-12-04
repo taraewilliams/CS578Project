@@ -26,9 +26,15 @@ def preprocess_data(read_directory, write_directory, number_test_samples, sort_l
 
 
     # Get Grouped Test Data
-    data, numerical_data, test_groups = group_test_data(data, numerical_data, group_label, number_test_samples)
-    data, numerical_data, validation_groups = group_test_data(data, numerical_data, group_label, (number_test_samples/2) )
-    data, numerical_data, training_groups = group_test_data(data, numerical_data, group_label, (number_test_samples) )
+    data, numerical_data, test_groups, test_group_data = group_test_data(data, numerical_data, group_label, number_test_samples)
+    data, numerical_data, validation_groups, validation_group_data = group_test_data(data, numerical_data, group_label, (number_test_samples/2) )
+    data, numerical_data, training_groups, training_group_data = group_test_data(data, numerical_data, group_label, (number_test_samples) )
+
+    # Write grouped data to CSV files
+    write_data(write_directory + '/group_test.csv', test_group_data)
+    write_data(write_directory + '/group_validation.csv', validation_group_data)
+    write_data(write_directory + '/group_train.csv', training_group_data)
+
     return data, numerical_data, test_groups, validation_groups, training_groups
 
 
@@ -81,6 +87,7 @@ def group_test_data(data, numerical_data, label, number_samples):
 
     visits = numerical_data[label].unique().tolist()
 
+    group_data = pd.DataFrame([], columns=list(data))
     groups = []
     group_indices = []
     group_values = []
@@ -101,12 +108,11 @@ def group_test_data(data, numerical_data, label, number_samples):
                 groups.append(group.values)
                 group_indices.append(visit_index)
                 group_values.append(visit)
-
-
+                group_data = group_data.append(group, ignore_index=True)
 
     data = data[~data[label].isin(group_values)]
     numerical_data = numerical_data[~numerical_data[label].isin(group_values)]
-    return data, numerical_data, groups
+    return data, numerical_data, groups, group_data
 
 
 # Convert categorical columns to numerical columns

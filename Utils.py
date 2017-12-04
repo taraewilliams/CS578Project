@@ -56,7 +56,7 @@ def crossValidation(train, label, model, cv):
         result[i] = model.score(cur_test, cur_test_label)
     return result
 
-def scv(X, y, model, cv = 3, test_size = 0.5)
+def scv(X, y, model, cv = 3, test_size = 0.5):
     result = np.zeros([cv, 1])
     sss = StratifiedShuffleSplit(n_splits=cv, test_size=test_size)
     index = 0

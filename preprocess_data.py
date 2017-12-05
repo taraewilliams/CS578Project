@@ -41,20 +41,15 @@ def preprocess_data(read_directory, write_directory, number_test_samples, sort_l
 def select_data_sets(data, numerical_data, write_directory, validation_percentage, convert_categorical=True, categorical_columns=["Weekday", "DepartmentDescription"], sort_label="TripType"):
 
     # Split data into training and validation data
-    validation_data, training_data = split_data(data, validation_percentage, sort_label)
+    validation_data, training_data, validation_data_numerical, training_data_numerical = split_data(data, numerical_data, validation_percentage, sort_label)
 
     # Write test, training, and validation data to CSV files
     write_data(write_directory + '/train.csv', training_data)
     write_data(write_directory + '/validation.csv', validation_data)
 
-    # Called if converting categories to numerical values
-    if convert_categorical:
-        # Split data into training and validation data
-        training_data_numerical = numerical_data.loc[numerical_data.index.isin(training_data.index)]
-        validation_data_numerical = numerical_data.loc[numerical_data.index.isin(validation_data.index)]
-        # Write training and validation data to CSV files
-        write_data(write_directory + '/train_numerical.csv', training_data_numerical)
-        write_data(write_directory + '/validation_numerical.csv', validation_data_numerical)
+    # Write training and validation data to CSV files
+    write_data(write_directory + '/train_numerical.csv', training_data_numerical)
+    write_data(write_directory + '/validation_numerical.csv', validation_data_numerical)
 
 
 # Read CSV file into Pandas DataFrame
@@ -124,9 +119,11 @@ def convert_categorical_columns(data, category_labels):
 # Split Data:
 #   Split the data by the input training percentage
 #   Label determines how to group the data: ie TripType
-def split_data(data, train_percentage, label):
+def split_data(data, numerical_data, train_percentage, label):
     training_data = pd.DataFrame([], columns=list(data))
     test_data = pd.DataFrame([], columns=list(data))
+    num_training_data = pd.DataFrame([], columns=list(data))
+    num_test_data = pd.DataFrame([], columns=list(data))
 
     trip_types = data[label].unique().tolist()
 
@@ -140,11 +137,14 @@ def split_data(data, train_percentage, label):
         # Choose training data
         training_sample = group.sample(n=number_samples)
         training_data = training_data.append(training_sample, ignore_index=True)
+        num_training_data = num_training_data.append(training_sample, ignore_index=True)
+
         # Choose test data
         test_sample = group.loc[~group.index.isin(training_sample.index)]
         test_data = test_data.append(test_sample, ignore_index=True)
+        num_test_data = num_test_data.append(test_sample, ignore_index=True)
 
-    return training_data, test_data
+    return training_data, test_data, num_training_data, num_test_data
 
 
 # Private Functions

@@ -95,7 +95,7 @@ def group_test_data(data, numerical_data, label, number_samples):
     is_full = False
 
     while not is_full:
-        visit_index = randint(0, len(visits))
+        visit_index = randint(0, len(visits)-1)
 
         if (visit_index not in group_indices):
             visit = visits[visit_index]
@@ -134,6 +134,8 @@ def split_data(data, train_percentage, label):
         group = data.loc[data[label]==trip]
 
         number_samples = math.floor((train_percentage * group.shape[0]) / 100)
+        if (number_samples == group.shape[0]):
+            number_samples -= 1
 
         # Choose training data
         training_sample = group.sample(n=number_samples)

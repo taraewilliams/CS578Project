@@ -4,6 +4,38 @@ import os
 import math
 
 
+def preprocess_data_random(read_directory, write_directory, number_test_samples, validation_percentage, sort_label="TripType"):
+    # Make write directory if it does not exist
+    if not os.path.isdir(write_directory):
+        try:
+            os.makedirs(write_directory)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+    # Clean all data
+    data = read_data(read_directory + "/grouped_data.csv")
+    data = clean_data(data, sort_label)
+    write_data(write_directory + '/grouped_data.csv', data)
+
+    # Get random test, training, and validation data
+    test_random, data = get_random_samples(data, number_test_samples)
+    training_random, data = get_random_samples(data, number_test_samples)
+    validation_random, data = get_random_samples(data, number_test_samples/2)
+    # Write test, training, and validation data to CSV files
+    write_data(write_directory + '/train_random.csv', training_random)
+    write_data(write_directory + '/test_random.csv', test_random)
+    write_data(write_directory + '/validation_random.csv', validation_random)
+
+
+    # Split data into training and validation data
+    validation_data, training_data, unused1, unused2 = split_data(data, validation_percentage, sort_label)
+
+    # Write test, training, and validation data to CSV files
+    write_data(write_directory + '/train.csv', training_data)
+    write_data(write_directory + '/remaining.csv', validation_data)
+
+
 def preprocess_data(read_directory, write_directory, number_test_samples, sort_label="TripType", group_label="VisitNumber", convert_categorical=True, categorical_columns=["Weekday", "DepartmentDescription"]):
 
     # Make write directory if it does not exist
@@ -41,7 +73,7 @@ def preprocess_data(read_directory, write_directory, number_test_samples, sort_l
 def select_data_sets(data, numerical_data, write_directory, validation_percentage, convert_categorical=True, categorical_columns=["Weekday", "DepartmentDescription"], sort_label="TripType"):
 
     # Split data into training and validation data
-    validation_data, training_data, validation_data_numerical, training_data_numerical = split_data(data, numerical_data, validation_percentage, sort_label)
+    validation_data, training_data, validation_data_numerical, training_data_numerical = split_data(data, validation_percentage, sort_label, True, numerical_data)
 
     # Write test, training, and validation data to CSV files
     write_data(write_directory + '/train.csv', training_data)
@@ -110,6 +142,12 @@ def group_test_data(data, numerical_data, label, number_samples):
     return data, numerical_data, groups, group_data
 
 
+def get_random_samples(data, sample_size):
+    sample_data = data.sample(n=int(sample_size))
+    data = data.loc[~data.index.isin(sample_data.index)]
+    return sample_data, data
+
+
 # Convert categorical columns to numerical columns
 def convert_categorical_columns(data, category_labels):
     numerical_data = convert_categorical_to_numerical(data.copy(), category_labels)
@@ -119,7 +157,7 @@ def convert_categorical_columns(data, category_labels):
 # Split Data:
 #   Split the data by the input training percentage
 #   Label determines how to group the data: ie TripType
-def split_data(data, numerical_data, train_percentage, label):
+def split_data(data, train_percentage, label, convert_categorical=False, numerical_data = []):
     training_data = pd.DataFrame([], columns=list(data))
     test_data = pd.DataFrame([], columns=list(data))
     num_training_data = pd.DataFrame([], columns=list(data))
@@ -137,12 +175,17 @@ def split_data(data, numerical_data, train_percentage, label):
         # Choose training data
         training_sample = group.sample(n=number_samples)
         training_data = training_data.append(training_sample, ignore_index=True)
-        num_training_data = num_training_data.append(training_sample, ignore_index=True)
 
         # Choose test data
         test_sample = group.loc[~group.index.isin(training_sample.index)]
         test_data = test_data.append(test_sample, ignore_index=True)
-        num_test_data = num_test_data.append(test_sample, ignore_index=True)
+
+        if convert_categorical:
+            group_num = numerical_data.loc[data[label]==trip]
+            training_sample_num = group_num.sample(n=number_samples)
+            test_sample_num = group_num.loc[~group_num.index.isin(training_sample.index)]
+            num_test_data = num_test_data.append(test_sample_num, ignore_index=True)
+            num_training_data = num_training_data.append(training_sample_num, ignore_index=True)
 
     return training_data, test_data, num_training_data, num_test_data
 
